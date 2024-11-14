@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  rack_app:
+    build: .
+    ports:
+      - "9292:9292"
+    volumes:
+      - ".:/app"
+    environment:
+      - RACK_ENV=development
