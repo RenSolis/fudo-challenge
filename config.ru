@@ -4,6 +4,7 @@ require "rack"
 require "json"
 require "bcrypt"
 require "jwt"
+require_relative "middlewares/gzip_compression"
 require_relative "middlewares/authorization"
 
 JWT_SECRET = "static_secret_key" # save in environment variable
@@ -14,11 +15,13 @@ users = [
 products = []
 
 app = Rack::Builder.new do
+  use GzipCompression
+
   map "/api/v1/sessions" do
     run Proc.new { |env|
       request = Rack::Request.new(env)
       response = Rack::Response.new
-      response["Content-Type"] = "application/json"
+      response["content-type"] = "application/json"
 
       data = JSON.parse(request.body.read)
       username = data["username"]
@@ -42,12 +45,12 @@ app = Rack::Builder.new do
   end
 
   map "/api/v1/products" do
-    use AuthorizationMiddleware
+    use Authorization
 
     run Proc.new { |env|
       request = Rack::Request.new(env)
       response = Rack::Response.new
-      response["Content-Type"] = "application/json"
+      response["content-type"] = "application/json"
 
       case request.request_method
       when "GET"
@@ -82,7 +85,7 @@ app = Rack::Builder.new do
 
   run Proc.new { |env|
     response = Rack::Response.new
-    response["Content-Type"] = "application/json"
+    response["content-type"] = "application/json"
     response.write({ error: "Not found" }.to_json)
     response.status = 404
     response.finish

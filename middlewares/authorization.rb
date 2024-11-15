@@ -2,7 +2,7 @@
 
 require "jwt"
 
-class AuthorizationMiddleware
+class Authorization
   JWT_SECRET = "static_secret_key" # save in environment variable
 
   def initialize(app)
