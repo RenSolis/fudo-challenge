@@ -4,6 +4,7 @@ require "rack"
 require "json"
 require "bcrypt"
 require "jwt"
+require "securerandom"
 require_relative "middlewares/gzip_compression"
 require_relative "middlewares/authorization"
 require_relative "middlewares/static_files"
@@ -15,6 +16,7 @@ users = [
   { username: "rensolis", password: BCrypt::Password.create("password123") }
 ]
 products = []
+product_jobs = {}
 
 app = Rack::Builder.new do
   use Rack::Static, urls: ["/openapi.yaml", "/AUTHORS"], root: "."
@@ -61,26 +63,68 @@ app = Rack::Builder.new do
         response.write(products.to_json)
         response.status = 200
       when "POST"
-
         data = JSON.parse(request.body.read)
+        job_id = SecureRandom.uuid
+
+        product_jobs[job_id] = { status: "pending" }
 
         Thread.new do
           sleep 5
 
-          new_product = {
-            id: products.size + 1,
-            name: data["name"],
-            price: data["price"]
-          }
+          errors = {}
 
-          products << new_product
+          if !data["name"]
+            errors["name"] = "Nombre en blanco"
+          end
+
+          if !data["price"]
+            errors["price"] = "Precio en blanco"
+          end
+
+          if errors.keys.length > 0
+            product_jobs[job_id][:status] = "failed"
+            product_jobs[job_id][:errors] = errors
+          else
+            new_product = {
+              id: products.size + 1,
+              name: data["name"],
+              price: data["price"]
+            }
+
+            products << new_product
+            product_jobs[job_id][:status] = "completed"
+            product_jobs[job_id][:product] = new_product
+          end
         end
 
-        response.write({ message: "Product creation in progress" }.to_json)
+        response.write({ job_id: job_id }.to_json)
         response.status = 202
       else
         response.write({ error: "Method not allowed" }.to_json)
         response.status = 405
+      end
+
+      response.finish
+    }
+  end
+
+  map "/api/v1/jobs" do
+    use Authorization
+
+    run Proc.new { |env|
+      request = Rack::Request.new(env)
+      response = Rack::Response.new
+      response["content-type"] = "application/json"
+
+      job_id = request.params["job_id"]
+      job = product_jobs[job_id]
+
+      if job
+        response.write(job.to_json)
+        response.status = 200
+      else
+        response.write({ error: "Job not found" }.to_json)
+        response.status = 404
       end
 
       response.finish

@@ -66,7 +66,6 @@ paths:
                     type: string
                     example: "Invalid username or password"
 
-
   /api/v1/products:
     get:
       summary: Get a list of products
@@ -159,3 +158,54 @@ paths:
                     type: string
                     example: "Method not allowed"
 
+  /api/v1/jobs:
+    get:
+      summary: Check the status of a product creation
+      description: Returns the status of an asynchronous product creation.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: job_id
+          required: true
+          schema:
+            type: string
+            example: b2e5892e-40f0-4715-a1ce-375b02774df0
+          description: The ID of the product to check the status of.
+      responses:
+        '200':
+          description: Product creation status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [in_progress, completed, failed]
+                    example: "completed"
+                  product:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: "Producto 1"
+                      price:
+                        type: number
+                        example: 10
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Job not found"
