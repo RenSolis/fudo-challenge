@@ -1,0 +1,161 @@
+openapi: 3.0.0
+info:
+  title: Fudo Challenge
+  description: Fudo Challenge
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:9292
+    description: Local server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Unauthorized access
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Unauthorized"
+
+paths:
+  /api/v1/sessions:
+    post:
+      summary: Login and generation of JWT token
+      description: Authenticates the user and returns a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "rensolis"
+                password:
+                  type: string
+                  example: "password123"
+      responses:
+        '200':
+          description: Successfully authenticated (compressed with gzip if `gzip=true`)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6InJlbnNvbGlzIiwiZXhwIjoxNjMxNTY0NzUzfQ.5JqL6p6AVjWT7XOoU9b_8PKNP_Vfb_Pbk6APXJm06zY"
+        '401':
+          description: Invalid username or password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid username or password"
+
+
+  /api/v1/products:
+    get:
+      summary: Get a list of products
+      description: Returns a list of all products.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: gzip
+          required: false
+          schema:
+            type: boolean
+            example: true
+          description: Set to true to return the response compressed with gzip
+      responses:
+        '200':
+          description: A list of products (compressed with gzip if `gzip=true`)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: "Product Name"
+                    price:
+                      type: number
+                      example: 19.99
+          headers:
+            Content-Encoding:
+              description: The response is compressed using gzip.
+              schema:
+                type: string
+                example: "gzip"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create a new product
+      description: Adds a new product to the list. [Asynchronous]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: gzip
+          required: false
+          schema:
+            type: boolean
+            example: true
+          description: Set to true to return the response compressed with gzip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "New Product"
+                price:
+                  type: number
+                  example: 29.99
+      responses:
+        '202':
+          description: Product creation in progress (compressed with gzip if `gzip=true`)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Product creation in progress"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          description: Method not allowed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Method not allowed"
+

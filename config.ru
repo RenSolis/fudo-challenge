@@ -6,6 +6,8 @@ require "bcrypt"
 require "jwt"
 require_relative "middlewares/gzip_compression"
 require_relative "middlewares/authorization"
+require_relative "middlewares/static_files"
+
 
 JWT_SECRET = "static_secret_key" # save in environment variable
 
@@ -15,6 +17,8 @@ users = [
 products = []
 
 app = Rack::Builder.new do
+  use Rack::Static, urls: ["/openapi.yaml", "/AUTHORS"], root: "."
+  use StaticFiles
   use GzipCompression
 
   map "/api/v1/sessions" do
